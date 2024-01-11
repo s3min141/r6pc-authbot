@@ -20,6 +20,8 @@ import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.interactions.components.buttons.ButtonStyle;
+import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
+import net.dv8tion.jda.api.utils.messages.MessageCreateData;
 import net.dv8tion.jda.api.utils.messages.MessageEditBuilder;
 import net.dv8tion.jda.api.utils.messages.MessageEditData;
 
@@ -34,47 +36,45 @@ public class ButtonServiceImpl implements iButtonService {
 
     @Override
     public void doAuth(ButtonInteractionEvent event) {
-        event.deferReply().queue();
-
         String discordUid = event.getUser().getId();
         VerifiedUser verifiedInfo = verifiedUserService.getByDiscordUid(discordUid);
         AuthBanInfo banInfo = authBanService.checkBanInfo(discordUid);
 
         if (banInfo != null) {
-            if (verifiedInfo != null && banInfo.getBanReason().equals("이미 인증된 계정입니다.")) {
-                String ubisoftUid = ubisoftService.getUserIdByDiscordUid(discordUid);
-                UbisoftProfile userProfile = ubisoftService.getProfileById(ubisoftUid);
-
-                if (!verifiedInfo.getUbisoftUname().equals(userProfile.getNameOnPlatform())) {
-                    MessageEmbed authEmbed = new EmbedBuilder()
-                            .setTitle("유비소프트 계정 인증")
-                            .setDescription(String.format(
-                                    "이미 %s 계정으로 연동되어있습니다. 기존 연동을 취소하고 %s 으로 다시 연동하시겠습니까?\n\n** 30초뒤에 자동 취소됩니다 **",
-                                    verifiedInfo.getUbisoftUname(), userProfile.getNameOnPlatform()))
-                            .setColor(Color.BLUE)
-                            .build();
-
-                    MessageEditData messageEditData = new MessageEditBuilder()
-                            .setEmbeds(authEmbed)
-                            .setActionRow(
-                                    Button.of(ButtonStyle.PRIMARY, String.format("doReAuth-%s", discordUid),
-                                            "네, 다시 연동합니다."))
-                            .build();
-
-                    event.getHook().editOriginal(messageEditData)
-                            .queue(message -> message.delete().queueAfter(30, TimeUnit.SECONDS));
-                    return;
-                }
-            }
-
             MessageEmbed embed = new EmbedBuilder()
                     .setTitle("유비소프트 계정 인증")
                     .setDescription(String.format("%s 이후에 재인증이 가능합니다.", banInfo.getEndDate()))
                     .addField("사유", banInfo.getBanReason(), false)
                     .setColor(Color.RED)
                     .build();
-            event.getHook().editOriginalEmbeds(embed).queue();
+            event.replyEmbeds(embed).queue();
             return;
+        }
+
+        if (verifiedInfo != null) {
+            String ubisoftUid = ubisoftService.getUserIdByDiscordUid(discordUid);
+            UbisoftProfile userProfile = ubisoftService.getProfileById(ubisoftUid);
+
+            if (!verifiedInfo.getUbisoftUid().equals(userProfile.getNameOnPlatform())) {
+                MessageEmbed authEmbed = new EmbedBuilder()
+                        .setTitle("유비소프트 계정 인증")
+                        .setDescription(String.format(
+                                "이미 %s 계정으로 연동되어있습니다. 기존 연동을 취소하고 %s 으로 다시 연동하시겠습니까?\n\n** 30초뒤에 자동 취소됩니다 **",
+                                verifiedInfo.getUbisoftUname(), userProfile.getNameOnPlatform()))
+                        .setColor(Color.BLUE)
+                        .build();
+
+                MessageCreateData messageCreateData = new MessageCreateBuilder()
+                        .setEmbeds(authEmbed)
+                        .setActionRow(
+                                Button.of(ButtonStyle.PRIMARY, String.format("doReAuth-%s", discordUid),
+                                        "네, 다시 연동합니다."))
+                        .build();
+
+                event.replyEmbeds(authEmbed).queue();
+                //event.reply(messageCreateData).queue();
+                return;
+            }
         }
 
         startPhase(event);
@@ -91,6 +91,7 @@ public class ButtonServiceImpl implements iButtonService {
         if (discordUid.equals(buttonOwnerUid)) {
             startPhase(event);
         }
+        event.getMessage().delete().queue();
     }
 
     public void startPhase(ButtonInteractionEvent event) {
@@ -126,7 +127,7 @@ public class ButtonServiceImpl implements iButtonService {
         }
 
         VerifiedUser checkAlreadyExist = verifiedUserService.getByUbisoftUid(ubisoftUid);
-        if (checkAlreadyExist != null) {
+        if (checkAlreadyExist != null && !checkAlreadyExist.getDiscordUid().equals(discordUid)) {
             phase1FailedMap.put(discordUid, phase1Failed == null ? 1 : phase1Failed + 1);
 
             MessageEmbed embed = new EmbedBuilder()
@@ -166,8 +167,8 @@ public class ButtonServiceImpl implements iButtonService {
             MessageEmbed embed = new EmbedBuilder()
                     .setTitle("유비소프트 계정 인증")
                     .setDescription("계정 연동과 TopPlayer 조건 일치가 확인되어 역할이 정상 부여되었습니다.")
-                    .addField("계정 닉네임", userProfile.getNameOnPlatform(), true)
-                    .addField("계정 ID", userProfile.getUserId(), true)
+                    .addField("유비소프트 계정", userProfile.getNameOnPlatform(), true)
+                    .addField("디스코드 계정", String.format("<@%s>", discordUid), true)
                     .addField("최근 MMR", userRank2MMR.toString(), true)
                     .setColor(Color.GREEN)
                     .build();
