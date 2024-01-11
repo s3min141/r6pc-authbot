@@ -12,6 +12,7 @@ import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.OnlineStatus;
 import net.dv8tion.jda.api.Permission;
+import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
@@ -84,6 +85,7 @@ public class BuildJDA {
                     .setCompression(Compression.NONE)
                     .setChunkingFilter(ChunkingFilter.NONE)
                     .setStatus(OnlineStatus.ONLINE)
+                    .setActivity(Activity.playing("계정인증"))
                     .setAutoReconnect(true)
                     .addEventListeners(new BotListener())
                     .enableIntents(GatewayIntent.MESSAGE_CONTENT)

@@ -36,5 +36,17 @@ public interface iVerifiedUserService {
      * @param <b>String</b> : 디스코드 UID
      * @return <b>VerifiedUser</b> 디스코드 UID로 인증된 유저 목록에서 정보를 가져와 있다면 VerifiedUser객체 없다면 null을 반환
      */
-    public VerifiedUser getByDiscordId(String discordUid);
+    public VerifiedUser getByDiscordUid(String discordUid);
+
+    /**
+     * 유비소프트 UID로 인증된 유저 DB에서 정보 가져오는 함수
+     * <hr/>
+     * 
+     * @author 세민
+     * @version 1.0
+     * @since 2024.01.11
+     * @param <b>String</b> : 유비소프트 UID
+     * @return <b>VerifiedUser</b> 유비소프트 UID로 인증된 유저 목록에서 정보를 가져와 있다면 VerifiedUser객체 없다면 null을 반환
+     */
+    public VerifiedUser getByUbisoftUid(String ubisoftUid);
 }

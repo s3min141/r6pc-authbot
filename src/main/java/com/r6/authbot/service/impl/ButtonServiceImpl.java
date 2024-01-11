@@ -2,6 +2,7 @@ package com.r6.authbot.service.impl;
 
 import java.awt.Color;
 import java.util.HashMap;
+import java.util.concurrent.TimeUnit;
 
 import com.r6.authbot.domain.AuthBanInfo;
 import com.r6.authbot.domain.RegisterAuthBan;
@@ -17,6 +18,10 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
+import net.dv8tion.jda.api.interactions.components.buttons.Button;
+import net.dv8tion.jda.api.interactions.components.buttons.ButtonStyle;
+import net.dv8tion.jda.api.utils.messages.MessageEditBuilder;
+import net.dv8tion.jda.api.utils.messages.MessageEditData;
 
 public class ButtonServiceImpl implements iButtonService {
 
@@ -29,26 +34,69 @@ public class ButtonServiceImpl implements iButtonService {
 
     @Override
     public void doAuth(ButtonInteractionEvent event) {
+        event.deferReply().queue();
+
         String discordUid = event.getUser().getId();
-        VerifiedUser verifiedInfo = verifiedUserService.getByDiscordId(discordUid);
+        VerifiedUser verifiedInfo = verifiedUserService.getByDiscordUid(discordUid);
         AuthBanInfo banInfo = authBanService.checkBanInfo(discordUid);
-        Integer phase1Failed = phase1FailedMap.get(discordUid);
-        Integer phase2Failed = phase2FailedMap.get(discordUid);
 
         if (banInfo != null) {
+            if (verifiedInfo != null && banInfo.getBanReason().equals("이미 인증된 계정입니다.")) {
+                String ubisoftUid = ubisoftService.getUserIdByDiscordUid(discordUid);
+                UbisoftProfile userProfile = ubisoftService.getProfileById(ubisoftUid);
+
+                if (!verifiedInfo.getUbisoftUname().equals(userProfile.getNameOnPlatform())) {
+                    MessageEmbed authEmbed = new EmbedBuilder()
+                            .setTitle("유비소프트 계정 인증")
+                            .setDescription(String.format(
+                                    "이미 %s 계정으로 연동되어있습니다. 기존 연동을 취소하고 %s 으로 다시 연동하시겠습니까?\n\n** 30초뒤에 자동 취소됩니다 **",
+                                    verifiedInfo.getUbisoftUname(), userProfile.getNameOnPlatform()))
+                            .setColor(Color.BLUE)
+                            .build();
+
+                    MessageEditData messageEditData = new MessageEditBuilder()
+                            .setEmbeds(authEmbed)
+                            .setActionRow(
+                                    Button.of(ButtonStyle.PRIMARY, String.format("doReAuth-%s", discordUid),
+                                            "네, 다시 연동합니다."))
+                            .build();
+
+                    event.getHook().editOriginal(messageEditData)
+                            .queue(message -> message.delete().queueAfter(30, TimeUnit.SECONDS));
+                    return;
+                }
+            }
+
             MessageEmbed embed = new EmbedBuilder()
                     .setTitle("유비소프트 계정 인증")
                     .setDescription(String.format("%s 이후에 재인증이 가능합니다.", banInfo.getEndDate()))
                     .addField("사유", banInfo.getBanReason(), false)
                     .setColor(Color.RED)
                     .build();
-            event.replyEmbeds(embed).queue();
+            event.getHook().editOriginalEmbeds(embed).queue();
             return;
         }
 
-        if (verifiedInfo != null) {
+        startPhase(event);
+    }
 
+    @Override
+    public void doReAuth(ButtonInteractionEvent event) {
+        event.deferReply().queue();
+
+        String discordUid = event.getUser().getId();
+        String buttonId = event.getButton().getId();
+        String buttonOwnerUid = buttonId.split("-")[1];
+
+        if (discordUid.equals(buttonOwnerUid)) {
+            startPhase(event);
         }
+    }
+
+    public void startPhase(ButtonInteractionEvent event) {
+        String discordUid = event.getUser().getId();
+        Integer phase1Failed = phase1FailedMap.get(discordUid);
+        Integer phase2Failed = phase2FailedMap.get(discordUid);
 
         if (phase1Failed != null && phase1Failed >= 3) {
             RegisterAuthBan registerBan = new RegisterAuthBan(discordUid, "프로필 등록이 되지않은 상태로 여러번 시도.", 7, 0, 0);
@@ -73,7 +121,20 @@ public class ButtonServiceImpl implements iButtonService {
                     .setDescription("유비소프트와 디스코드간 계정 연동을 확인할 수 없습니다. 계정 연결하기 버튼을 먼저 눌러 연동 작업을 진행해 주세요.")
                     .setColor(Color.RED)
                     .build();
-            event.replyEmbeds(embed).queue();
+            event.getHook().editOriginalEmbeds(embed).queue();
+            return;
+        }
+
+        VerifiedUser checkAlreadyExist = verifiedUserService.getByUbisoftUid(ubisoftUid);
+        if (checkAlreadyExist != null) {
+            phase1FailedMap.put(discordUid, phase1Failed == null ? 1 : phase1Failed + 1);
+
+            MessageEmbed embed = new EmbedBuilder()
+                    .setTitle("유비소프트 계정 인증")
+                    .setDescription(String.format("%s는 이미 연결되어있는 계정입니다.", checkAlreadyExist.getUbisoftUname()))
+                    .setColor(Color.RED)
+                    .build();
+            event.getHook().editOriginalEmbeds(embed).queue();
             return;
         }
 
@@ -87,7 +148,7 @@ public class ButtonServiceImpl implements iButtonService {
                     .setDescription("Ubisoft 프로필을 가져올 수 없습니다.")
                     .setColor(Color.RED)
                     .build();
-            event.replyEmbeds(embed).queue();
+            event.getHook().editOriginalEmbeds(embed).queue();
             return;
         }
 
@@ -110,18 +171,20 @@ public class ButtonServiceImpl implements iButtonService {
                     .addField("최근 MMR", userRank2MMR.toString(), true)
                     .setColor(Color.GREEN)
                     .build();
-            event.replyEmbeds(embed).queue();
+            event.getHook().editOriginalEmbeds(embed).queue();
         } else {
+            RegisterAuthBan registerBan = new RegisterAuthBan(discordUid, "이미 인증된 계정입니다.", 7, 0, 0);
+            authBanService.registerAuthBan(registerBan);
+
             MessageEmbed embed = new EmbedBuilder()
                     .setTitle("유비소프트 계정 인증")
-                    .setDescription("계정 연동은 정상적으로 확인되었으나, TopPlayer 역할은 4700 MMR 이상만 신청 가능합니다.")
+                    .setDescription(String.format("계정 연동은 정상적으로 확인되었으나, TopPlayer 역할은 %s MMR 이상만 신청 가능합니다.",
+                            BotConfig.MIN_RANKER_MMR.getIntVal()))
                     .setColor(Color.RED)
                     .build();
-            event.replyEmbeds(embed).queue();
+            event.getHook().editOriginalEmbeds(embed).queue();
         }
 
-        RegisterAuthBan registerBan = new RegisterAuthBan(discordUid, "이미 인증된 계정입니다.", 7, 0, 0);
-        authBanService.registerAuthBan(registerBan);
         phase1FailedMap.remove(discordUid);
     }
 }

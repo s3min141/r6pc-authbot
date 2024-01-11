@@ -167,7 +167,7 @@ public class CommandServiceImpl implements iCommandService {
                                         .addField("디스코드 UID", discordUid, true)
                                         .addField("디스코드 아이디", targetUser.getUser().getName(), true)
                                         .addField("사유", banReason, false)
-                                        .addField("차단 해제 일시", createdBanInfo.getEndDate(), false)
+                                        .addField("차단 해제 일시", createdBanInfo.getEndDate(), true)
                                         .setFooter("차단일시: " + createdBanInfo.getStartDate())
                                         .setColor(Color.GREEN)
                                         .build();

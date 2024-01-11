@@ -26,6 +26,8 @@ public class BotListener extends ListenerAdapter {
         String buttonId = event.getButton().getId();
         if (buttonId.equals("doAuth")) {
             buttonService.doAuth(event);
+        } else if (buttonId.contains("doReAuth")) {
+            buttonService.doReAuth(event);
         }
     }
 

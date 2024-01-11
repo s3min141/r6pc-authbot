@@ -52,12 +52,35 @@ public class VerifiedUserDaoImpl implements iVerifiedUserDao{
     }
 
     @Override
-    public VerifiedUser get(String discordUid) {
+    public VerifiedUser getByDiscordUid(String discordUid) {
         Connection conn = DataSource.getConn();
         String sql = "SELECT * FROM `verified_user` WHERE `discord_uid`=?";
         try {
             PreparedStatement pstmt = conn.prepareStatement(sql);
             pstmt.setString(1, discordUid);
+            ResultSet rs = pstmt.executeQuery();
+            VerifiedUser verifiedInfo = null;
+            if (rs.next()) {
+                verifiedInfo = new VerifiedUser();
+                verifiedInfo.setDiscordUid(rs.getString(1));
+                verifiedInfo.setUbisoftUid(rs.getString(2));
+                verifiedInfo.setUbisoftUname(rs.getString(3));
+                verifiedInfo.setCurrentMMR(rs.getInt(4));
+            }
+            return verifiedInfo;
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            return null;
+        }
+    }
+
+    @Override
+    public VerifiedUser getByUbisoftUid(String ubisoftUid) {
+        Connection conn = DataSource.getConn();
+        String sql = "SELECT * FROM `verified_user` WHERE `ubisoft_uid`=?";
+        try {
+            PreparedStatement pstmt = conn.prepareStatement(sql);
+            pstmt.setString(1, ubisoftUid);
             ResultSet rs = pstmt.executeQuery();
             VerifiedUser verifiedInfo = null;
             if (rs.next()) {

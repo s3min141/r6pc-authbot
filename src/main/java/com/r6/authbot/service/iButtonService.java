@@ -22,4 +22,15 @@ public interface iButtonService {
      * @param <b>ButtonInteractionEvent</b> : 버튼 인터렉션시 만들어지는 객체
      */
     public void doAuth(ButtonInteractionEvent event);
+
+    /**
+     * 재인증 시작 함수
+     * <hr/>
+     * 
+     * @author 세민
+     * @version 1.0
+     * @since 2024.01.11
+     * @param <b>ButtonInteractionEvent</b> : 버튼 인터렉션시 만들어지는 객체
+     */
+    public void doReAuth(ButtonInteractionEvent event);
 }

@@ -33,7 +33,12 @@ public class VerifiedUserServiceImpl implements iVerifiedUserService {
     }
 
     @Override
-    public VerifiedUser getByDiscordId(String discordUid) {
-        return verifiedUserDao.get(discordUid);
+    public VerifiedUser getByDiscordUid(String discordUid) {
+        return verifiedUserDao.getByDiscordUid(discordUid);
+    }
+
+    @Override 
+    public VerifiedUser getByUbisoftUid(String ubisoftUid) {
+        return verifiedUserDao.getByUbisoftUid(ubisoftUid);
     }
 }
