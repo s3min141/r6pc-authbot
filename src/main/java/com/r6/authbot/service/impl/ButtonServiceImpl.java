@@ -20,8 +20,6 @@ import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.interactions.components.buttons.ButtonStyle;
-import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
-import net.dv8tion.jda.api.utils.messages.MessageCreateData;
 import net.dv8tion.jda.api.utils.messages.MessageEditBuilder;
 import net.dv8tion.jda.api.utils.messages.MessageEditData;
 
@@ -41,34 +39,42 @@ public class ButtonServiceImpl implements iButtonService {
         AuthBanInfo banInfo = authBanService.checkBanInfo(discordUid);
 
         if (banInfo != null) {
+            event.deferReply().queue();
+
             MessageEmbed embed = new EmbedBuilder()
                     .setTitle("유비소프트 계정 인증")
                     .setDescription(String.format("%s 이후에 재인증이 가능합니다.", banInfo.getEndDate()))
                     .addField("사유", banInfo.getBanReason(), false)
                     .setColor(Color.RED)
                     .build();
-            event.replyEmbeds(embed).queue();
+            event.getHook().editOriginalEmbeds(embed).queue();
             return;
         }
 
         if (verifiedInfo != null) {
-            String ubisoftUid = ubisoftService.getUserIdByDiscordUid(discordUid);
+            event.deferReply().setEphemeral(true).queue();
 
-            if (!verifiedInfo.getUbisoftUid().equals(ubisoftUid)) {
+            String ubisoftUid = ubisoftService.getUserIdByDiscordUid(discordUid);
+            UbisoftProfile userProfile = ubisoftService.getProfileById(ubisoftUid);
+
+            if (!verifiedInfo.getUbisoftUid().equals(userProfile.getNameOnPlatform())) {
                 MessageEmbed authEmbed = new EmbedBuilder()
                         .setTitle("유비소프트 계정 인증")
-                        .setDescription(String.format("이미 %s 계정으로 연동되어있습니다. 기존 연동을 취소하고 다시 연동하시겠습니까?\n\n** 30초뒤에 자동 취소됩니다 **", verifiedInfo.getUbisoftUname()))
+                        .setDescription(String.format(
+                                "이미 %s 계정으로 연동되어있습니다. 기존 연동을 취소하고 %s 으로 다시 연동하시겠습니까?\n\n** 30초뒤에 자동 취소됩니다 **",
+                                verifiedInfo.getUbisoftUname(), userProfile.getNameOnPlatform()))
                         .setColor(Color.BLUE)
                         .build();
 
-                MessageCreateData messageCreateData = new MessageCreateBuilder()
+                MessageEditData messageEditData = new MessageEditBuilder()
                         .setEmbeds(authEmbed)
                         .setActionRow(
                                 Button.of(ButtonStyle.PRIMARY, String.format("doReAuth-%s", discordUid),
                                         "네, 다시 연동합니다."))
                         .build();
 
-                event.reply(messageCreateData).setEphemeral(true).queue();
+                event.getHook().setEphemeral(true).editOriginal(messageEditData)
+                        .queue(message -> message.delete().queueAfter(30, TimeUnit.SECONDS));
                 return;
             }
         }
