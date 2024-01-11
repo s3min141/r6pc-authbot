@@ -53,14 +53,11 @@ public class ButtonServiceImpl implements iButtonService {
 
         if (verifiedInfo != null) {
             String ubisoftUid = ubisoftService.getUserIdByDiscordUid(discordUid);
-            UbisoftProfile userProfile = ubisoftService.getProfileById(ubisoftUid);
 
-            if (!verifiedInfo.getUbisoftUid().equals(userProfile.getNameOnPlatform())) {
+            if (!verifiedInfo.getUbisoftUid().equals(ubisoftUid)) {
                 MessageEmbed authEmbed = new EmbedBuilder()
                         .setTitle("유비소프트 계정 인증")
-                        .setDescription(String.format(
-                                "이미 %s 계정으로 연동되어있습니다. 기존 연동을 취소하고 %s 으로 다시 연동하시겠습니까?\n\n** 30초뒤에 자동 취소됩니다 **",
-                                verifiedInfo.getUbisoftUname(), userProfile.getNameOnPlatform()))
+                        .setDescription(String.format("이미 %s 계정으로 연동되어있습니다. 기존 연동을 취소하고 다시 연동하시겠습니까?\n\n** 30초뒤에 자동 취소됩니다 **", verifiedInfo.getUbisoftUname()))
                         .setColor(Color.BLUE)
                         .build();
 
@@ -71,8 +68,7 @@ public class ButtonServiceImpl implements iButtonService {
                                         "네, 다시 연동합니다."))
                         .build();
 
-                event.replyEmbeds(authEmbed).queue();
-                //event.reply(messageCreateData).queue();
+                event.reply(messageCreateData).setEphemeral(true).queue();
                 return;
             }
         }
