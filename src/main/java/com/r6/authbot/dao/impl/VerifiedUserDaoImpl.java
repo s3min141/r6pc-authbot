@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 
 import com.r6.authbot.configure.DataSource;
 import com.r6.authbot.dao.iVerifiedUserDao;
@@ -91,6 +92,29 @@ public class VerifiedUserDaoImpl implements iVerifiedUserDao{
                 verifiedInfo.setCurrentMMR(rs.getInt(4));
             }
             return verifiedInfo;
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            return null;
+        }
+    }
+
+    @Override
+    public ArrayList<VerifiedUser> getList() {
+        Connection conn = DataSource.getConn();
+        String sql = "SELECT * FROM `verified_user`";
+        ArrayList<VerifiedUser> verifiedUsers = new ArrayList<>();
+        try {
+            PreparedStatement pstmt = conn.prepareStatement(sql);
+            ResultSet rs = pstmt.executeQuery();
+            while (rs.next()) {
+                VerifiedUser verifiedInfo = new VerifiedUser();
+                verifiedInfo.setDiscordUid(rs.getString(1));
+                verifiedInfo.setUbisoftUid(rs.getString(2));
+                verifiedInfo.setUbisoftUname(rs.getString(3));
+                verifiedInfo.setCurrentMMR(rs.getInt(4));
+                verifiedUsers.add(verifiedInfo);
+            }
+            return verifiedUsers;
         } catch (SQLException ex) {
             ex.printStackTrace();
             return null;

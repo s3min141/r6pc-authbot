@@ -49,4 +49,14 @@ public interface iAuthBanDao {
      * @return <b>AuthBanInfo</b> 인증 차단 정보를 담고 있는 domain
      */
     public AuthBanInfo getBanInfoById(String discordUid);
+
+    /**
+     * 만료된 차단 삭제
+     * <hr/>
+     * 
+     * @author 세민
+     * @version 1.0
+     * @since 2024.01.15
+     */
+    public void clean();
 }

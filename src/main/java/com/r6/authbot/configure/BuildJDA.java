@@ -8,6 +8,7 @@ import com.r6.authbot.enums.APIConfig;
 import com.r6.authbot.enums.BotConfig;
 import com.r6.authbot.listener.BotListener;
 
+import io.github.bonigarcia.wdm.managers.ChromeDriverManager;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.OnlineStatus;
@@ -55,7 +56,8 @@ public class BuildJDA {
 
     private void initCommands(JDA jda) {
         jda.updateCommands()
-                .addCommands(Commands.slash("인증봇관리", "인증봇 관리를 위한 명령어 입니다.")
+                .addCommands(
+                    Commands.slash("인증봇관리", "인증봇 관리를 위한 명령어 입니다.")
                         .setGuildOnly(true)
                         .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MODERATE_MEMBERS))
                         .addSubcommands(
@@ -92,6 +94,9 @@ public class BuildJDA {
                     .build()
                     .awaitReady();
             initCommands(jda);
+            
+            Scheduler scheduler = new Scheduler();
+            scheduler.start();
         } catch (Exception ex) {
             System.out.println("Failed to build JDA");
             ex.printStackTrace();

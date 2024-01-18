@@ -2,6 +2,7 @@ package com.r6.authbot.service.impl;
 
 import java.awt.Color;
 import java.sql.SQLException;
+import java.util.ArrayList;
 
 import com.r6.authbot.dao.iVerifiedUserDao;
 import com.r6.authbot.dao.impl.VerifiedUserDaoImpl;
@@ -40,5 +41,10 @@ public class VerifiedUserServiceImpl implements iVerifiedUserService {
     @Override 
     public VerifiedUser getByUbisoftUid(String ubisoftUid) {
         return verifiedUserDao.getByUbisoftUid(ubisoftUid);
+    }
+
+    @Override
+    public ArrayList<VerifiedUser> getVerifiedUserList() {
+        return verifiedUserDao.getList();
     }
 }

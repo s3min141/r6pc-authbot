@@ -107,4 +107,20 @@ public class AuthBanDaoImpl implements iAuthBanDao {
             return null;
         }
     }
+
+    @Override
+    public void clean() {
+        Connection conn = DataSource.getConn();
+        String sql = "DELETE FROM auth_ban WHERE end_date < CURRENT_DATE";
+        try {
+            PreparedStatement pstmt = conn.prepareStatement(sql);
+            pstmt.executeUpdate();
+
+            pstmt.close();
+            conn.close();
+        } catch (SQLException ex) {
+            System.out.println("========= 만료된 인증 차단 삭제 중 오류 발생 =========");
+            ex.printStackTrace();
+        }
+    }
 }

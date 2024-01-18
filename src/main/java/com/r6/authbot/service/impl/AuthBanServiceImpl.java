@@ -57,4 +57,9 @@ public class AuthBanServiceImpl implements iAuthBanService {
         }
         return false;
     }
+
+    @Override
+    public void cleanExpiredAuthBan() {
+        authBanDao.clean();
+    }
 }
