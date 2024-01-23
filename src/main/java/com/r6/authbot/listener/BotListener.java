@@ -28,6 +28,8 @@ public class BotListener extends ListenerAdapter {
             buttonService.doAuth(event);
         } else if (buttonId.contains("doReAuth")) {
             buttonService.doReAuth(event);
+        } else if (buttonId.contains("leaderboardPaging")) {
+            buttonService.pagingLeaderboard(event);
         }
     }
 
@@ -48,6 +50,8 @@ public class BotListener extends ListenerAdapter {
                 commandService.blockUser(event);
             } else if (subCommandName.equals("차단해제")) {
                 commandService.unblockUser(event);
+            } else if (subCommandName.equals("새로고침")) {
+                commandService.refreshLeaderboard(event);
             }
         }
     }

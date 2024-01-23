@@ -61,6 +61,7 @@ public class BuildJDA {
                         .setGuildOnly(true)
                         .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.MODERATE_MEMBERS))
                         .addSubcommands(
+                            new SubcommandData("새로고침", "리더보드의 이미지를 새로고침합니다."),
                                 new SubcommandData("초기설정", "인증임베드와 리더보드 임베드를 생성합니다."),
                                 new SubcommandData("상태", "현재 인증봇의 상태를 표시합니다."),
                                 new SubcommandData("랭커조건", "랭커인지 판단하는 MMR값을 설정합니다. (기본값 4700)")

@@ -1,6 +1,7 @@
 package com.r6.authbot.dao;
 
 import com.r6.authbot.domain.UbisoftProfile;
+import com.r6.authbot.domain.UserRankInfo;
 
 /**
  * Ubosft API관련 Dao
@@ -47,16 +48,17 @@ public interface iUbisoftDao {
     public UbisoftProfile getProfile(String userId);
 
     /**
-     * Rank2.0 MMR 조회하는 함수
+     * Rank2.0 정보 조회하는 함수
      * <hr/>
      * 
      * @author 세민
      * @version 1.0
-     * @since 2024.01.11
+     * @since 2024.01.23
      * @param <b>String</b> : 유비소프트 UID
-     * @return <b>Integer</b> : Rank2.0 MMR의 값
+     * @return <b>Integer</b> : Rank2.0 정보를 담은 UserRankInfo 도메인
      */
-    public Integer getUserMMR(String userId);
+    public UserRankInfo getUserRankInfo(String userId);
+
 
     /**
      * 유비소프트 API Session Ticket이 유효한지 확인하는 함수

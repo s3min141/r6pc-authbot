@@ -11,8 +11,10 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
+import com.google.gson.JsonObject;
 import com.r6.authbot.dao.iUbisoftDao;
 import com.r6.authbot.domain.UbisoftProfile;
+import com.r6.authbot.domain.UserRankInfo;
 import com.r6.authbot.enums.APIConfig;
 
 public class UbisoftDaoImpl implements iUbisoftDao {
@@ -138,7 +140,7 @@ public class UbisoftDaoImpl implements iUbisoftDao {
     }
 
     @Override
-    public Integer getUserMMR(String userId) {
+    public UserRankInfo getUserRankInfo(String userId) {
         try {
             String targetUrl = String.format("%s/v2/spaces/0d2ae42d-4c27-4cb7-af6c-2099062302bb/title/r6s/skill/full_profiles?profile_ids=%s&platform_families=pc",
                     APIConfig.BASE_UBISERVICES.get(), userId);
@@ -170,6 +172,9 @@ public class UbisoftDaoImpl implements iUbisoftDao {
             JSONArray platformFamilies = (JSONArray) jsonObject.get("platform_families_full_profiles");
 
             Integer userRank2MMR = 0;
+            Integer userRank2Kills = 0;
+            Integer userRank2Wins = 0;
+
             for (Object platformFamilyObj : platformFamilies) {
                 JSONObject platformFamily = (JSONObject) platformFamilyObj;
 
@@ -186,7 +191,12 @@ public class UbisoftDaoImpl implements iUbisoftDao {
 
                         JSONObject fullProfile = (JSONObject) fullProfiles.get(0);
                         JSONObject profile = (JSONObject) fullProfile.get("profile");
+                        JSONObject seasonStatistics = (JSONObject) fullProfile.get("season_statistics");
+                        JSONObject matchOutcomes = (JSONObject) seasonStatistics.get("match_outcomes");
+
                         userRank2MMR = Integer.parseInt(profile.get("rank_points").toString());
+                        userRank2Kills = Integer.parseInt(seasonStatistics.get("kills").toString());
+                        userRank2Wins = Integer.parseInt(matchOutcomes.get("wins").toString());
                         break;
                     }
                 }
@@ -195,9 +205,10 @@ public class UbisoftDaoImpl implements iUbisoftDao {
                     break;
                 }
             }
-            return userRank2MMR;
+
+            return new UserRankInfo(userRank2MMR, userRank2Kills, userRank2Wins);
         } catch (Exception ex) {
-            return 0;
+            return null;
         }
     }
 

@@ -1,7 +1,7 @@
 package com.r6.authbot.enums;
 
 import java.util.ArrayList;
-import java.io.InputStream;
+import java.io.File;
 
 public enum BotConfig {
     PROPERTIES_FILE_NAME("application.properties"),
@@ -17,7 +17,7 @@ public enum BotConfig {
 
     private String strVal;
     private Integer intVal;
-    private ArrayList<InputStream> arrayVal; 
+    private ArrayList<File> arrayVal; 
 
     private BotConfig() {
 
@@ -31,7 +31,7 @@ public enum BotConfig {
         this.intVal = intVal;
     }
 
-    private BotConfig(ArrayList<InputStream> arrayVal) {
+    private BotConfig(ArrayList<File> arrayVal) {
         this.arrayVal = arrayVal;
     }
 
@@ -51,11 +51,11 @@ public enum BotConfig {
         return intVal;
     }
 
-    public void setArrayVal(ArrayList<InputStream> arrayVal) {
+    public void setArrayVal(ArrayList<File> arrayVal) {
         this.arrayVal = arrayVal;
     }
 
-    public ArrayList<InputStream> getArrayVal() {
+    public ArrayList<File> getArrayVal() {
         return arrayVal;
     }
 }

@@ -1,8 +1,11 @@
 package com.r6.authbot.service.impl;
 
 import java.awt.Color;
+import java.io.InputStream;
+import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.ArrayList;
 
 import com.r6.authbot.domain.AuthBanInfo;
 import com.r6.authbot.domain.RegisterAuthBan;
@@ -11,14 +14,18 @@ import com.r6.authbot.enums.BotConfig;
 import com.r6.authbot.service.iAuthBanService;
 import com.r6.authbot.service.iCommandService;
 import com.r6.authbot.service.iUbisoftService;
+import com.r6.authbot.util.LeaderboardUtil;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.channel.unions.MessageChannelUnion;
+import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.interactions.components.buttons.ButtonStyle;
+import net.dv8tion.jda.api.requests.restaction.MessageCreateAction;
+import net.dv8tion.jda.api.utils.FileUpload;
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
 import net.dv8tion.jda.api.utils.messages.MessageCreateData;
 
@@ -29,30 +36,72 @@ public class CommandServiceImpl implements iCommandService {
 
         @Override
         public void initSetting(SlashCommandInteractionEvent event) {
-                MessageEmbed resultEmbed = null;
+                event.deferReply().setEphemeral(true).queue();
 
+                MessageEmbed resultEmbed = null;
                 try {
                         // Auth Embed
                         MessageEmbed authEmbed = new EmbedBuilder()
                                         .setTitle("유비소프트 계정 인증")
-                                        .setDescription("계정 인증 진행을 위해 ** 인증하기 **✅ 버튼을 눌러주세요.")
+                                        .setDescription("계정 인증 진행을 위해 ✅ ** 인증하기 ** 버튼을 눌러주세요.")
                                         .setColor(Color.BLUE)
                                         .build();
 
-                        MessageCreateData messageCreateData = new MessageCreateBuilder()
+                        MessageCreateData authMessageCreateData = new MessageCreateBuilder()
                                         .setEmbeds(authEmbed)
                                         .addActionRow(
                                                         Button.link("https://account.ubisoft.com/ko-KR/account-information",
                                                                         "계정 연결하기"),
-                                                        Button.of(ButtonStyle.PRIMARY, "doAuth", "인증하기 ✅"))
+                                                        Button.of(ButtonStyle.PRIMARY, "doAuth", "인증하기")
+                                                                        .withEmoji(Emoji.fromUnicode("✅")))
                                         .build();
 
                         MessageChannelUnion authChannel = event.getGuild().getChannelById(MessageChannelUnion.class,
                                         BotConfig.AUTH_CHANNEL_ID.getStrVal());
-                        authChannel.sendMessage(messageCreateData).queue();
+                        authChannel.sendMessage(authMessageCreateData).queue();
 
                         // Leaderboard Embed
-                        // TBD
+                        InputStream leaderboardImgStream = LeaderboardUtil.getLeaderboardImg(0);
+                        MessageEmbed leaderboardEmbed = new EmbedBuilder()
+                                        .setTitle("R6PC 리더보드")
+                                        .setDescription("** 인증시스템을 통해 인증된 유저들중 상위 유저들을 표시합니다. **")
+                                        .setImage("attachment://leaderboard.png")
+                                        .setColor(new Color(139, 31, 59))
+                                        .build();
+
+                        if (leaderboardImgStream == null) {
+                                leaderboardEmbed = new EmbedBuilder()
+                                                .setTitle("R6PC 리더보드")
+                                                .setDescription("## 이미지 로딩중 오류가 발생했습니다.")
+                                                .setColor(new Color(139, 31, 59))
+                                                .build();
+                        }
+
+                        MessageCreateData leaderboardMessageCreateData = new MessageCreateBuilder()
+                                        .setEmbeds(leaderboardEmbed)
+                                        .addActionRow(
+                                                        Button.secondary("leaderboardPagingFirst",
+                                                                        Emoji.fromUnicode("⏪")),
+                                                        Button.secondary("leaderboardPagingPrev",
+                                                                        Emoji.fromUnicode("◀️")),
+                                                        Button.secondary("leaderboardPagingRefresh",
+                                                                        Emoji.fromUnicode("🔄")),
+                                                        Button.secondary("leaderboardPagingNext",
+                                                                        Emoji.fromUnicode("▶️")),
+                                                        Button.secondary("leaderboardPagingLast",
+                                                                        Emoji.fromUnicode("⏩")))
+                                        .build();
+
+                        MessageChannelUnion leaderboardChannel = event.getGuild().getChannelById(
+                                        MessageChannelUnion.class,
+                                        BotConfig.LEADERBOARD_CHANNEL_ID.getStrVal());
+
+                        MessageCreateAction messageAction = leaderboardChannel
+                                        .sendMessage(leaderboardMessageCreateData);
+                        if (leaderboardImgStream != null) {
+                                messageAction.setFiles(FileUpload.fromData(leaderboardImgStream, "leaderboard.png"));
+                        }
+                        messageAction.queue();
 
                         // Result Embed
                         resultEmbed = new EmbedBuilder()
@@ -70,7 +119,7 @@ public class CommandServiceImpl implements iCommandService {
                         ex.printStackTrace();
                 }
 
-                event.replyEmbeds(resultEmbed).setEphemeral(true).queue();
+                event.getHook().editOriginalEmbeds(resultEmbed).queue();
         }
 
         @Override
@@ -212,5 +261,26 @@ public class CommandServiceImpl implements iCommandService {
                                         .build();
                 }
                 event.replyEmbeds(embed).queue();
+        }
+
+        @Override
+        public void refreshLeaderboard(SlashCommandInteractionEvent event) {
+                try {
+                        LeaderboardUtil.refreshLeaderboard();
+                        MessageEmbed embed = new EmbedBuilder()
+                                        .setTitle("R6PC 리더보드")
+                                        .setDescription("성공적으로 새로고침 하였습니다.")
+                                        .setColor(Color.RED)
+                                        .build();
+                        event.replyEmbeds(embed).queue();
+                } catch (Exception ex) {
+                        ex.printStackTrace();
+                        MessageEmbed embed = new EmbedBuilder()
+                                        .setTitle("R6PC 인증봇 유저 차단 해제")
+                                        .setDescription("새로고침중 오류가 발생했습니다.")
+                                        .setColor(Color.RED)
+                                        .build();
+                        event.replyEmbeds(embed).queue();
+                }
         }
 }

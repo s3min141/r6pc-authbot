@@ -25,8 +25,8 @@ public class VerifiedUserDaoImpl implements iVerifiedUserDao{
             isExist = rs.getBoolean(1);
         }
 
-        String nonExistSql = "INSERT INTO `verified_user`(`discord_uid`, `ubisoft_uid`, `ubisoft_uname`, `current_mmr`) VALUES(?,?,?,?)";
-        String existSql = "UPDATE `verified_user` SET `ubisoft_uid`=?, `ubisoft_uname`=?, `current_mmr`=? WHERE `discord_uid`=?";
+        String nonExistSql = "INSERT INTO `verified_user`(`discord_uid`, `ubisoft_uid`, `ubisoft_uname`, `current_mmr`, `current_kills`, `current_wins`) VALUES(?,?,?,?,?,?)";
+        String existSql = "UPDATE `verified_user` SET `ubisoft_uid`=?, `ubisoft_uname`=?, `current_mmr`=?, `current_kills`=?, `current_wins`=? WHERE `discord_uid`=?";
         PreparedStatement pstmt = null;
         if (isExist) {
             pstmt = conn.prepareStatement(existSql);
@@ -34,6 +34,8 @@ public class VerifiedUserDaoImpl implements iVerifiedUserDao{
             pstmt.setString(2, user.getUbisoftUname());
             pstmt.setInt(3, user.getCurrentMMR());
             pstmt.setString(4, user.getDiscordUid());
+            pstmt.setInt(5, user.getCurrentKills());
+            pstmt.setInt(6, user.getCurrentWins());
         }
         else {
             pstmt = conn.prepareStatement(nonExistSql);
@@ -41,6 +43,8 @@ public class VerifiedUserDaoImpl implements iVerifiedUserDao{
             pstmt.setString(2, user.getUbisoftUid());
             pstmt.setString(3, user.getUbisoftUname());
             pstmt.setInt(4, user.getCurrentMMR());
+            pstmt.setInt(5, user.getCurrentKills());
+            pstmt.setInt(6, user.getCurrentWins());
         }
 
         if (pstmt.executeUpdate() == 0) {
@@ -67,6 +71,8 @@ public class VerifiedUserDaoImpl implements iVerifiedUserDao{
                 verifiedInfo.setUbisoftUid(rs.getString(2));
                 verifiedInfo.setUbisoftUname(rs.getString(3));
                 verifiedInfo.setCurrentMMR(rs.getInt(4));
+                verifiedInfo.setCurrentKills(rs.getInt(5));
+                verifiedInfo.setCurrentWins(rs.getInt(6));
             }
             return verifiedInfo;
         } catch (SQLException ex) {
@@ -90,6 +96,8 @@ public class VerifiedUserDaoImpl implements iVerifiedUserDao{
                 verifiedInfo.setUbisoftUid(rs.getString(2));
                 verifiedInfo.setUbisoftUname(rs.getString(3));
                 verifiedInfo.setCurrentMMR(rs.getInt(4));
+                verifiedInfo.setCurrentKills(rs.getInt(5));
+                verifiedInfo.setCurrentWins(rs.getInt(6));
             }
             return verifiedInfo;
         } catch (SQLException ex) {
@@ -112,6 +120,8 @@ public class VerifiedUserDaoImpl implements iVerifiedUserDao{
                 verifiedInfo.setUbisoftUid(rs.getString(2));
                 verifiedInfo.setUbisoftUname(rs.getString(3));
                 verifiedInfo.setCurrentMMR(rs.getInt(4));
+                verifiedInfo.setCurrentKills(rs.getInt(5));
+                verifiedInfo.setCurrentWins(rs.getInt(6));
                 verifiedUsers.add(verifiedInfo);
             }
             return verifiedUsers;

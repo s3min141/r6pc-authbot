@@ -22,4 +22,6 @@ public class VerifiedUser {
     private String ubisoftUid;
     private String ubisoftUname;
     private Integer currentMMR;
+    private Integer currentKills;
+    private Integer currentWins;
 }

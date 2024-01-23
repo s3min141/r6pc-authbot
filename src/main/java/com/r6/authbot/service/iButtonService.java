@@ -33,4 +33,15 @@ public interface iButtonService {
      * @param <b>ButtonInteractionEvent</b> : 버튼 인터렉션시 만들어지는 객체
      */
     public void doReAuth(ButtonInteractionEvent event);
+
+    /**
+     * 리더보드 페이징 함수
+     * <hr/>
+     * 
+     * @author 세민
+     * @version 1.0
+     * @since 2024.01.19
+     * @param <b>ButtonInteractionEvent</b> : 버튼 인터렉션시 만들어지는 객체
+     */
+    public void pagingLeaderboard(ButtonInteractionEvent event);
 }

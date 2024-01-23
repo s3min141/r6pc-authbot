@@ -2,7 +2,6 @@ package com.r6.authbot.dao;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.List;
 
 import com.r6.authbot.domain.VerifiedUser;
 

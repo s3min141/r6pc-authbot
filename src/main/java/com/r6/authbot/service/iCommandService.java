@@ -77,4 +77,15 @@ public interface iCommandService {
      * @param <b>SlashCommandInteractionEvent</b> : 슬래시 커맨드 사용시 만들어지는 이벤트 객체
      */
     public void unblockUser(SlashCommandInteractionEvent event);
+
+    /**
+     * 리더보드 새로고침 커맨드 함수
+     * <hr/>
+     * 
+     * @author 세민
+     * @version 1.0
+     * @since 2024.01.19
+     * @param <b>SlashCommandInteractionEvent</b> : 슬래시 커맨드 사용시 만들어지는 이벤트 객체
+     */
+    public void refreshLeaderboard(SlashCommandInteractionEvent event);
 }

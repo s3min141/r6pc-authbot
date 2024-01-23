@@ -1,12 +1,13 @@
 package com.r6.authbot.configure;
 
+import java.io.File;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
-import java.util.Collections;
-
-import java.io.InputStream;
 
 import com.r6.authbot.domain.VerifiedUser;
 import com.r6.authbot.enums.BotConfig;
@@ -14,7 +15,7 @@ import com.r6.authbot.service.iAuthBanService;
 import com.r6.authbot.service.iVerifiedUserService;
 import com.r6.authbot.service.impl.AuthBanServiceImpl;
 import com.r6.authbot.service.impl.VerifiedUserServiceImpl;
-import com.r6.authbot.util.CommonUtil;
+import com.r6.authbot.util.LeaderboardUtil;
 import com.r6.authbot.util.VerifiedUserComparator;
 
 /**
@@ -45,6 +46,10 @@ public class Scheduler {
         TimerTask clearBanTask = new TimerTask() {
             @Override
             public void run() {
+                SimpleDateFormat sdformat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                Date startDate = new Date();
+
+                System.out.println(String.format("[%s] ========== 만료된 인증차단 삭제 시작 ==========", sdformat.format(startDate)));
                 authBanService.cleanExpiredAuthBan();
             }
         };
@@ -53,38 +58,17 @@ public class Scheduler {
         TimerTask reloadLeaderboardTask = new TimerTask() {
             @Override
             public void run() {
-                ArrayList<InputStream> imgArray = new ArrayList<>();
-                ArrayList<VerifiedUser> verifiedUsers = verifiedUserService.getVerifiedUserList();
-                Collections.sort(verifiedUsers, new VerifiedUserComparator());
+                SimpleDateFormat sdformat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                Date startDate = new Date();
 
-                String tbodyString = "";
+                System.out.println(String.format("[%s] ========== 리더보드 이미지 업데이트 시작 ==========", sdformat.format(startDate)));
 
-                Integer userPerPage = 5;
-                Integer currentPage = 1;
-                Integer userCount = 1;
-
-                while (currentPage <= verifiedUsers.size() / userPerPage + 1) {
-                    tbodyString += CommonUtil.createTbodyElement(verifiedUsers.get(0), 1);
-                    tbodyString += "<tr>\r\n" + // divder
-                            "                <td style='border-top: 4px solid gray;'></td>\r\n" + //
-                            "                <td style='border-top: 4px solid gray;'></td>\r\n" + //
-                            "                <td style='border-top: 4px solid gray;'></td>\r\n" + //
-                            "            </tr>";
-                    for (Integer i = userCount; i < verifiedUsers.size(); i++) {
-                        if (verifiedUsers.get(i) == null || userCount >= currentPage * userPerPage) {
-                            break;
-                        }
-
-                        tbodyString += CommonUtil.createTbodyElement(verifiedUsers.get(i), i + 1);
-                        userCount++;
-                    }
-
-                    imgArray.add(CommonUtil.createLeaderboardImg(tbodyString));
-                    tbodyString = "";
-                    currentPage++;
+                try {
+                    LeaderboardUtil.refreshLeaderboard();
+                } catch (Exception ex) {
+                    System.out.println(String.format("[%s] ========== 리더보드 이미지 업데이트 실패 ==========", sdformat.format(startDate)));
+                    ex.printStackTrace();
                 }
-
-                BotConfig.LEADERBOARD_IMGS.setArrayVal(imgArray);
             }
         };
 

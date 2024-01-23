@@ -1,25 +1,35 @@
 package com.r6.authbot.service.impl;
 
 import java.awt.Color;
+import java.io.InputStream;
+import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.Date;
+import java.time.LocalDateTime;
 
 import com.r6.authbot.domain.AuthBanInfo;
 import com.r6.authbot.domain.RegisterAuthBan;
 import com.r6.authbot.domain.UbisoftProfile;
+import com.r6.authbot.domain.UserRankInfo;
 import com.r6.authbot.domain.VerifiedUser;
 import com.r6.authbot.enums.BotConfig;
 import com.r6.authbot.service.iAuthBanService;
 import com.r6.authbot.service.iButtonService;
 import com.r6.authbot.service.iUbisoftService;
 import com.r6.authbot.service.iVerifiedUserService;
+import com.r6.authbot.util.LeaderboardUtil;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.Role;
+import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.interactions.components.buttons.ButtonStyle;
+import net.dv8tion.jda.api.requests.restaction.interactions.MessageEditCallbackAction;
+import net.dv8tion.jda.api.utils.FileUpload;
 import net.dv8tion.jda.api.utils.messages.MessageEditBuilder;
 import net.dv8tion.jda.api.utils.messages.MessageEditData;
 
@@ -31,6 +41,9 @@ public class ButtonServiceImpl implements iButtonService {
 
     private HashMap<String, Integer> phase1FailedMap = new HashMap<>();
     private HashMap<String, Integer> phase2FailedMap = new HashMap<>();
+
+    private Integer leaderboardIndex = 0;
+    private Long leaderboardLastInteracted;
 
     @Override
     public void doAuth(ButtonInteractionEvent event) {
@@ -79,6 +92,9 @@ public class ButtonServiceImpl implements iButtonService {
             }
         }
 
+        if (!event.isAcknowledged()) {
+            event.deferReply().queue();
+        }
         startPhase(event);
     }
 
@@ -155,12 +171,12 @@ public class ButtonServiceImpl implements iButtonService {
             return;
         }
 
-        Integer userRank2MMR = ubisoftService.getUserRank2MMR(userProfile.getUserId());
-        Boolean isRanker = userRank2MMR >= BotConfig.MIN_RANKER_MMR.getIntVal();
+        UserRankInfo userRankInfo = ubisoftService.getUserRankInfo(userProfile.getUserId());
+        Boolean isRanker = userRankInfo.getMmr() >= BotConfig.MIN_RANKER_MMR.getIntVal();
 
         if (isRanker) {
             VerifiedUser registerUserInfo = new VerifiedUser(discordUid, ubisoftUid, userProfile.getNameOnPlatform(),
-                    userRank2MMR);
+                    userRankInfo.getMmr(), userRankInfo.getKills(), userRankInfo.getWins());
             verifiedUserService.registerToVerifiedUser(event, registerUserInfo);
 
             Role specialRole = event.getGuild().getRoleById(BotConfig.SPECIAL_ROLE_ID.getStrVal());
@@ -171,7 +187,7 @@ public class ButtonServiceImpl implements iButtonService {
                     .setDescription("계정 연동과 TopPlayer 조건 일치가 확인되어 역할이 정상 부여되었습니다.")
                     .addField("유비소프트 계정", userProfile.getNameOnPlatform(), true)
                     .addField("디스코드 계정", String.format("<@%s>", discordUid), true)
-                    .addField("최근 MMR", userRank2MMR.toString(), true)
+                    .addField("최근 MMR", userRankInfo.getMmr().toString(), true)
                     .setColor(Color.GREEN)
                     .build();
             event.getHook().editOriginalEmbeds(embed).queue();
@@ -189,5 +205,108 @@ public class ButtonServiceImpl implements iButtonService {
         }
 
         phase1FailedMap.remove(discordUid);
+    }
+
+    @Override
+    public void pagingLeaderboard(ButtonInteractionEvent event) {
+        Long currentTime = System.currentTimeMillis();
+        if (leaderboardLastInteracted != null && currentTime - leaderboardLastInteracted < 5000) { //5초 쿨다운 적용
+            MessageEmbed errorEmbed = new EmbedBuilder()
+                    .setTitle("R6PC 리더보드")
+                    .setDescription("쿨다운이 적용되어있습니다.")
+                    .setColor(new Color(139, 31, 59))
+                    .build();
+            event.replyEmbeds(errorEmbed).setEphemeral(true)
+                    .queue(createdMessage -> createdMessage.deleteOriginal().queueAfter(30, TimeUnit.SECONDS));
+            return;
+        }
+        leaderboardLastInteracted = currentTime;
+
+        String actionString = event.getButton().getId().replace("leaderboardPaging", "");
+        ArrayList<File> leaderboardImgList = BotConfig.LEADERBOARD_IMGS.getArrayVal();
+        Integer tempIndex = leaderboardIndex;
+
+        if (leaderboardImgList == null) {
+            return;
+        }
+
+        if (actionString.equals("First")) {
+            tempIndex = 0;
+        } else if (actionString.equals("Prev")) {
+            tempIndex--;
+            if (tempIndex < 0) {
+                MessageEmbed errorEmbed = new EmbedBuilder()
+                        .setTitle("R6PC 리더보드")
+                        .setDescription("최소 페이지에 도달했습니다.")
+                        .setColor(new Color(139, 31, 59))
+                        .build();
+                event.replyEmbeds(errorEmbed).setEphemeral(true)
+                        .queue(createdMessage -> createdMessage.deleteOriginal().queueAfter(30, TimeUnit.SECONDS));
+                return;
+            }
+        } else if (actionString.equals("Next")) {
+            tempIndex++;
+            if (tempIndex >= leaderboardImgList.size()) {
+                MessageEmbed errorEmbed = new EmbedBuilder()
+                        .setTitle("R6PC 리더보드")
+                        .setDescription("최대 페이지에 도달했습니다.")
+                        .setColor(new Color(139, 31, 59))
+                        .build();
+                event.replyEmbeds(errorEmbed).setEphemeral(true)
+                        .queue(createdMessage -> createdMessage.deleteOriginal().queueAfter(30, TimeUnit.SECONDS));
+                return;
+            }
+        } else if (actionString.equals("Last")) {
+            tempIndex = leaderboardImgList.size() - 1;
+        }
+        leaderboardIndex = tempIndex;
+
+        InputStream leaderboardImgStream = LeaderboardUtil.getLeaderboardImg(leaderboardIndex);
+
+        MessageEmbed leaderboardEmbed = new EmbedBuilder()
+                .setTitle("R6PC 리더보드")
+                .setDescription("** 인증시스템을 통해 인증된 유저들중 상위 유저들을 표시합니다. **")
+                .setImage("attachment://leaderboard.png")
+                .setColor(new Color(139, 31, 59))
+                .build();
+
+        if (leaderboardImgStream == null) {
+            leaderboardEmbed = new EmbedBuilder()
+                    .setTitle("R6PC 리더보드")
+                    .setDescription("## 이미지 로딩중 오류가 발생했습니다.")
+                    .setColor(new Color(139, 31, 59))
+                    .build();
+        }
+
+        MessageEditCallbackAction editAction = event.editMessageEmbeds(leaderboardEmbed);
+        if (leaderboardImgStream != null) {
+            if (BotConfig.LEADERBOARD_IMGS.getArrayVal().size() == 1) {
+                editAction.setActionRow(
+                        Button.secondary("leaderboardPagingFirst",
+                                Emoji.fromUnicode("⏪")).asDisabled(),
+                        Button.secondary("leaderboardPagingPrev",
+                                Emoji.fromUnicode("◀️")),
+                        Button.secondary("leaderboardPagingRefresh",
+                                Emoji.fromUnicode("🔄")),
+                        Button.secondary("leaderboardPagingNext",
+                                Emoji.fromUnicode("▶️")),
+                        Button.secondary("leaderboardPagingLast",
+                                Emoji.fromUnicode("⏩")).asDisabled());
+            } else {
+                editAction.setActionRow(
+                        Button.secondary("leaderboardPagingFirst",
+                                Emoji.fromUnicode("⏪")),
+                        Button.secondary("leaderboardPagingPrev",
+                                Emoji.fromUnicode("◀️")),
+                        Button.secondary("leaderboardPagingRefresh",
+                                Emoji.fromUnicode("🔄")),
+                        Button.secondary("leaderboardPagingNext",
+                                Emoji.fromUnicode("▶️")),
+                        Button.secondary("leaderboardPagingLast",
+                                Emoji.fromUnicode("⏩")));
+            }
+            editAction.setFiles(FileUpload.fromData(leaderboardImgStream, "leaderboard.png"));
+        }
+        editAction.queue();
     }
 }
